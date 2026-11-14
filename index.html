@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d19">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.png">
+<title>ALEKUTAK</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- заставка при запуске: идёт под звук intro.wav -->
+<div id="splash" aria-hidden="true">
+  <div class="sp-glow"></div>
+  <div class="sp-stage">
+    <div class="sp-mark"><div class="sp-logo" data-mark></div><div class="sp-sheen" id="spSheen"></div></div>
+    <div class="sp-word">ALEKUTAK</div>
+  </div>
+</div>
+
+<header id="bar">
+  <div class="brand"><span class="mark" data-mark></span><b>ALEKUTAK</b></div>
+  <div id="barRoom" class="bar-room" hidden>
+    <button id="btnCode" class="code" title="Скопировать код комнаты"><span>Комната</span><b id="roomCode"></b></button>
+    <span id="timer" class="timer">00:00</span>
+    <span id="netState" class="net">на связи</span>
+  </div>
+  <div class="grow"></div>
+  <div class="winbtns">
+    <button data-win="min" title="Свернуть"><svg viewBox="0 0 12 12"><path d="M2 6h8" /></svg></button>
+    <button data-win="max" title="Развернуть"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" /></svg></button>
+    <button data-win="close" class="x" title="Закрыть"><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg></button>
+  </div>
+</header>
+
+<!-- ================= лобби ================= -->
+<section id="lobby">
+  <div class="hero">
+    <div class="bigmark" data-mark></div>
+    <h1>ALEKUTAK</h1>
+  </div>
+
+  <form class="enter" id="enterForm" onsubmit="return false">
+    <label class="fld"><span>Твой ник</span>
+      <input id="nick" maxlength="20" placeholder="Как тебя зовут в игре" autocomplete="off">
+    </label>
+    <div class="switches">
+      <label class="sw"><input type="checkbox" id="startMic" checked><i></i>Микрофон</label>
+      <label class="sw"><input type="checkbox" id="startCam"><i></i>Камера</label>
+      <button type="button" id="btnSettingsLobby" class="link">Настройки звука</button>
+    </div>
+
+    <button type="button" id="btnCreate" class="btn solid">Создать комнату</button>
+    <div class="mycode">Твой постоянный код <b id="myCode"></b><button type="button" id="btnNewCode" class="link">сменить</button></div>
+
+    <div class="or">или войти к друзьям</div>
+    <div class="join">
+      <input id="code" maxlength="6" placeholder="Код комнаты" autocomplete="off" spellcheck="false">
+      <button type="button" id="btnJoin" class="btn">Войти</button>
+    </div>
+    <div id="lobbyMsg" class="lobby-msg" role="status"></div>
+  </form>
+</section>
+
+<!-- ================= комната ================= -->
+<section id="room" hidden>
+  <div class="stage">
+    <main id="grid"></main>
+    <aside id="chat" hidden>
+      <div class="chat-head">Чат<button type="button" id="chatClose" class="link">Закрыть</button></div>
+      <div id="chatLog" class="chat-log"></div>
+      <form id="chatForm" class="chat-form">
+        <input id="chatInput" maxlength="500" placeholder="Написать команде" autocomplete="off">
+        <button class="btn solid" title="Отправить"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" /></svg></button>
+      </form>
+    </aside>
+  </div>
+
+  <footer id="dock">
+    <button id="btnMic" class="dk"><span class="ico"></span><em>Микрофон</em></button>
+    <button id="btnDeaf" class="dk"><span class="ico"></span><em>Звук</em></button>
+    <span class="sep"></span>
+    <button id="btnCam" class="dk"><span class="ico" data-ico="cam"></span><em>Камера</em></button>
+    <button id="btnScreen" class="dk"><span class="ico" data-ico="screen"></span><em>Экран</em></button>
+    <span class="sep"></span>
+    <button id="btnChat" class="dk"><span class="ico" data-ico="chat"></span><em>Чат</em><b id="chatBadge" class="badge" hidden>0</b></button>
+    <button id="btnOverlay" class="dk"><span class="ico" data-ico="overlay"></span><em>Поверх игры</em></button>
+    <button id="btnSettings" class="dk"><span class="ico" data-ico="gear"></span><em>Настройки</em></button>
+    <span class="sep"></span>
+    <button id="btnLeave" class="dk leave"><span class="ico" data-ico="leave"></span><em>Выйти</em></button>
+  </footer>
+</section>
+
+<!-- ================= мини-окно поверх игры ================= -->
+<section id="ov" hidden>
+  <div class="ov-head"><span class="mark" data-mark></span><b id="ovCode"></b><button id="ovBack" title="Развернуть окно"><svg viewBox="0 0 24 24"><path d="M5 10V5h5M19 14v5h-5M5 5l6 6M19 19l-6-6" /></svg></button></div>
+  <div id="ovList" class="ov-list"></div>
+  <div class="ov-foot">
+    <button id="ovMic" title="Микрофон"></button>
+    <button id="ovDeaf" title="Звук"></button>
+  </div>
+</section>
+
+<!-- выбор экрана -->
+<div id="picker" class="modal" hidden>
+  <div class="box wide">
+    <h2>Что показать команде</h2>
+    <div id="pickerList" class="picker"></div>
+    <div class="actions"><button id="pickerCancel" class="btn">Отмена</button></div>
+  </div>
+</div>
+
+<!-- настройки -->
+<div id="settings" class="modal" hidden>
+  <div class="box">
+    <h2>Настройки</h2>
+
+    <h3>Микрофон</h3>
+    <label class="fld"><span>Устройство</span><select id="selMic"></select></label>
+    <div class="fld"><span>Когда тебя слышно</span>
+      <div class="seg" id="segMode">
+        <button type="button" data-mode="voice">Когда говорю</button>
+        <button type="button" data-mode="ptt">Пока держу кнопку</button>
+      </div>
+    </div>
+    <div class="fld" id="pttRow" hidden><span>Кнопка рации</span>
+      <button type="button" id="btnBind" class="btn bind">Назначить кнопку</button>
+      <small id="pttHint">Подойдёт клавиша или боковая кнопка мыши. Работает и когда открыта игра.</small>
+    </div>
+    <div class="fld" id="gateRow"><span>Порог шума: <b id="gateVal"></b></span>
+      <div class="meter"><i id="meterBar"></i><u id="meterMark"></u></div>
+      <input type="range" id="gate" min="0" max="100">
+      <small>Всё, что тише порога, команда не слышит: клавиатура, вентилятор, дыхание.</small>
+    </div>
+    <label class="fld"><span>Усиление микрофона: <b id="boostVal"></b></span>
+      <input type="range" id="boost" min="50" max="300" step="10">
+    </label>
+
+    <h3>Звук</h3>
+    <label class="fld"><span>Наушники или колонки</span><select id="selOut"></select></label>
+    <label class="fld"><span>Громкость всей команды: <b id="masterVal"></b></span>
+      <input type="range" id="master" min="0" max="200">
+    </label>
+    <label class="sw"><input type="checkbox" id="cues"><i></i>Сигналы и звук заставки</label>
+
+    <h3>Камера</h3>
+    <label class="fld"><span>Устройство</span><select id="selCam"></select></label>
+
+    <div class="only-pc">
+    <h3>Окно поверх игры</h3>
+    <label class="fld"><span>Непрозрачность: <b id="ovOpVal"></b></span>
+      <input type="range" id="ovOp" min="40" max="100" step="5">
+    </label>
+
+    <h3>Горячие клавиши</h3>
+    <dl class="keys">
+      <dt><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>M</kbd></dt><dd>включить или выключить микрофон</dd>
+      <dt><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>D</kbd></dt><dd>заглушить всех и себя</dd>
+      <dt><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>O</kbd></dt><dd>мини-окно поверх игры</dd>
+    </dl>
+
+    </div>
+
+    <div class="actions"><button id="settingsClose" class="btn solid">Готово</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script src="peerjs.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
