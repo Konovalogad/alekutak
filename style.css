@@ -14,6 +14,7 @@
   --p1: #ffc531; --p2: #ff5c8a; --p3: #38d6ff; --p4: #7cff6b; /* цвета игроков */
   --bad: #ff4d4d;
   --bar-h: 42px;
+  --sat: env(safe-area-inset-top, 0px); /* вырез и строка состояния на телефоне */
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -21,6 +22,7 @@ body {
   background: var(--ink); color: var(--text);
   font: 500 14px/1.45 "Exo 2", "Segoe UI", sans-serif; font-variant-numeric: tabular-nums;
   overflow: hidden; user-select: none; display: flex; flex-direction: column;
+  padding-top: var(--sat); box-sizing: border-box;
 }
 [hidden] { display: none !important; }
 button, input, select { font: inherit; color: inherit; }
@@ -185,7 +187,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
 .chat-form svg { width: 18px; height: 18px; }
 
 /* ---------- окна настроек и выбора экрана ---------- */
-.modal { position: fixed; inset: var(--bar-h) 0 0 0; background: rgba(6, 8, 16, .8); display: grid; place-items: center; z-index: 20; }
+.modal { position: fixed; inset: calc(var(--bar-h) + var(--sat)) 0 0 0; background: rgba(6, 8, 16, .8); display: grid; place-items: center; z-index: 20; }
 .box { width: 480px; max-height: calc(100vh - var(--bar-h) - 40px); overflow-y: auto; background: var(--deck); border: 1px solid var(--edge); border-radius: 16px; padding: 24px 26px; }
 .box.wide { width: 780px; }
 .box h2 { margin: 0 0 18px; font-weight: 900; font-style: italic; font-size: 24px; }
@@ -209,7 +211,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
 .src img { width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #000; display: block; border-radius: 5px; }
 .src div { margin-top: 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-#toasts { position: fixed; left: 50%; top: calc(var(--bar-h) + 14px); transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+#toasts { position: fixed; left: 50%; top: calc(var(--bar-h) + var(--sat) + 14px); transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
 .toast { background: var(--text); color: var(--ink); font-weight: 600; border-radius: 9px; padding: 8px 16px; }
 
 /* ---------- мини-окно поверх игры ---------- */
@@ -315,9 +317,9 @@ html, body { height: 100dvh; }
   #dock { gap: 6px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
   .dk { min-width: 0; flex: 1; padding: 13px 0; }
   .dk em, .sep { display: none; }
-  #chat { position: fixed; inset: var(--bar-h) 0 0 0; width: auto; margin: 0; border-radius: 0; border: 0; z-index: 15; }
+  #chat { position: fixed; inset: calc(var(--bar-h) + var(--sat)) 0 0 0; width: auto; margin: 0; border-radius: 0; border: 0; z-index: 15; }
   .modal { place-items: end center; }
-  .box, .box.wide { width: 100vw; max-height: calc(100dvh - var(--bar-h) - 10px); border-radius: 18px 18px 0 0; padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); }
+  .box, .box.wide { width: 100vw; max-height: calc(100dvh - var(--bar-h) - var(--sat) - 10px); border-radius: 18px 18px 0 0; padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); }
   .picker { grid-template-columns: 1fr 1fr; }
   input:not([type=range]):not([type=checkbox]), select { font-size: 16px; } /* иначе телефон приближает страницу при вводе */
 }

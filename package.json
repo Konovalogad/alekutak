@@ -1,0 +1,11 @@
+{
+  "name": "alekutak-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Сборка ALEKUTAK под Android",
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2"
+  }
+}

@@ -1,0 +1,52 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Собрать веб-часть в www
+        run: |
+          mkdir -p www
+          cp -r index.html app.js style.css peerjs.min.js intro.wav icon.png icon-192.png manifest.webmanifest fonts www/
+
+      - name: Подготовить Android-проект
+        run: |
+          npm ci
+          npx cap sync android
+
+      - name: Собрать APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Переименовать APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Alekutak.apk
+
+      - name: Выложить в релизы
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-${{ github.run_number }}
+          name: ALEKUTAK для Android, сборка ${{ github.run_number }}
+          body: Скачайте Alekutak.apk на телефон и откройте его, чтобы установить.
+          files: Alekutak.apk
+          make_latest: true
