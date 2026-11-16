@@ -26,7 +26,7 @@ jobs:
       - name: Собрать веб-часть в www
         run: |
           mkdir -p www
-          cp -r index.html app.js style.css peerjs.min.js intro.wav icon.png icon-192.png manifest.webmanifest fonts www/
+          cp -r index.html app.js style.css signal.js peerjs.min.js intro.wav icon.png icon-192.png manifest.webmanifest fonts www/
 
       - name: Подготовить Android-проект
         run: |

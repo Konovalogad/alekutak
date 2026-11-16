@@ -1,7 +1,7 @@
 'use strict';
 /* ALEKUTAK — голосовая связь для игр. WebRTC «каждый с каждым», сигналинг через PeerJS. */
 
-const PREFIX = 'alekutak-v3-';
+const PREFIX = 'alekutak-v4-';
 const MAX_PLAYERS = 4;
 const COLORS = ['#ffc531', '#ff5c8a', '#38d6ff', '#7cff6b'];
 const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -78,19 +78,19 @@ function myRoomCode() {
   return c;
 }
 function peerOptions() {
-  const dev = new URLSearchParams(location.search).get('dev'); // локальная проверка
+  const dev = new URLSearchParams(location.search).get('dev'); // локальная проверка со своим сервером PeerJS
   const o = {
     debug: 1,
+    host: AlekutakSignal.host, port: 443, path: '/', secure: true, // на самом деле это публичные брокеры, см. signal.js
     config: {
       iceServers: [
         { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-        { urls: 'stun:stun.cloudflare.com:3478' },
-        { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }
+        { urls: 'stun:stun.cloudflare.com:3478' }
       ],
       sdpSemantics: 'unified-plan'
     }
   };
-  if (dev) { const [h, p] = dev.split(':'); o.host = h; o.port = +p; o.path = '/'; o.secure = false; }
+  if (dev) { const [h, p] = dev.split(':'); o.host = h; o.port = +p; o.secure = false; }
   return o;
 }
 
@@ -474,6 +474,7 @@ async function createRoom(attempt) {
     roomCode = myRoomCode();
   }
   isHost = true;
+  AlekutakSignal.setRoom(roomCode);
   peer = new Peer(PREFIX + roomCode, peerOptions());
   peer.once('open', () => enterRoom());
   peer.on('error', (err) => {
@@ -494,7 +495,8 @@ async function joinRoom() {
   await prepareMedia();
   isHost = false; roomCode = code;
   const hostId = PREFIX + code;
-  peer = new Peer(peerOptions());
+  AlekutakSignal.setRoom(code);
+  peer = new Peer(PREFIX + 'u-' + genCode() + genCode() + genCode(), peerOptions());
   peer.on('error', peerError);
   attachPeerEvents();
   joinTimer = setTimeout(() => { if (!inRoom) failJoin('Не получилось подключиться. Проверь код и интернет'); }, 15000);
@@ -753,62 +755,17 @@ async function runDiag() {
   const report = ['ALEKUTAK, проверка связи, ' + new Date().toLocaleString('ru-RU'), navigator.userAgent];
   const row = (title) => { const li = document.createElement('li'); li.className = 'wait'; li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = title; list.appendChild(li); return li; };
   const set = (li, ok, text) => { li.className = ok ? 'ok' : 'bad'; li.lastChild.textContent = text; report.push((ok ? '[да]  ' : '[НЕТ] ') + li.firstChild.textContent + ': ' + text); };
-  const timed = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
-  const opt = peerOptions();
 
-  const r1 = row('Сервер поиска собеседников: обычный запрос');
-  const t1 = Date.now();
-  const http = await timed(fetch('https://0.peerjs.com/peerjs/id', { cache: 'no-store' }).then((r) => r.ok).catch(() => false), 8000);
-  set(r1, !!http, http ? 'отвечает, ' + (Date.now() - t1) + ' мс' : http === null ? 'нет ответа за 8 секунд' : 'запрос не прошёл');
-
-  const r2 = row('Сервер поиска собеседников: постоянное соединение');
-  const ws = await new Promise((res) => {
-    const t0 = Date.now(); let p;
-    const done = (ok, text) => { try { p.destroy(); } catch (e) { /* ignore */ } res({ ok, text }); };
-    try {
-      p = new Peer(opt);
-      p.on('open', () => done(true, 'подключается, ' + (Date.now() - t0) + ' мс'));
-      p.on('error', (e) => done(false, 'ошибка: ' + (e.type || 'неизвестная')));
-      setTimeout(() => done(false, 'нет ответа за 10 секунд'), 10000);
-    } catch (e) { res({ ok: false, text: 'не запустилось' }); }
+  const jobs = AlekutakSignal.brokers.map(async (url) => {
+    const li = row('Сервер поиска собеседников: ' + new URL(url).hostname);
+    const r = await AlekutakSignal.probe(url); set(li, r.ok, r.ok ? 'работает, ' + r.ms + ' мс' : 'недоступен');
+    return r.ok;
   });
-  set(r2, ws.ok, ws.text);
-
   const stuns = [['Определение адреса: Google', { urls: 'stun:stun.l.google.com:19302' }], ['Определение адреса: Cloudflare', { urls: 'stun:stun.cloudflare.com:3478' }]];
-  for (const [title, srv] of stuns) { const li = row(title); const r = await iceProbe(srv, false); set(li, r.ok, r.ok ? 'отвечает, ' + r.ms + ' мс' : 'не отвечает'); }
-  const turn = opt.config.iceServers.find((x) => x.username);
-  const r5 = row('Запасной путь для звука и видео (ретранслятор)');
-  const tr = await iceProbe(turn, true); set(r5, tr.ok, tr.ok ? 'работает, ' + tr.ms + ' мс' : 'не работает');
-
-  // запасные площадки: где можно разместить сервер поиска так, чтобы он открывался из любой страны
-  const timedOk = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(false), ms))]);
-  const httpProbe = (url) => timedOk(fetch(url, { mode: 'no-cors', cache: 'no-store' }).then(() => true).catch(() => false), 8000);
-  const wsProbe = (url, proto) => timedOk(new Promise((res) => {
-    try { const w = proto ? new WebSocket(url, proto) : new WebSocket(url); w.onopen = () => { res(true); w.close(); }; w.onerror = () => res(false); w.onclose = () => res(false); } catch (e) { res(false); }
-  }), 8000);
-  const spare = [
-    ['huggingface.co', () => httpProbe('https://huggingface.co/robots.txt')],
-    ['hf.space', () => httpProbe('https://alekutak-probe.hf.space/')],
-    ['deno.dev', () => httpProbe('https://alekutak-probe.deno.dev/')],
-    ['onrender.com', () => httpProbe('https://alekutak-probe.onrender.com/')],
-    ['koyeb.app', () => httpProbe('https://alekutak-probe.koyeb.app/')],
-    ['fly.dev', () => httpProbe('https://alekutak-probe.fly.dev/')],
-    ['workers.dev', () => httpProbe('https://alekutak-probe.workers.dev/')],
-    ['supabase.co', () => httpProbe('https://alekutak-probe.supabase.co/')],
-    ['firebaseio.com', () => httpProbe('https://alekutak-probe-default-rtdb.firebaseio.com/.json')],
-    ['broker.emqx.io', () => wsProbe('wss://broker.emqx.io:8084/mqtt', 'mqtt')],
-    ['broker.hivemq.com', () => wsProbe('wss://broker.hivemq.com:8884/mqtt', 'mqtt')],
-    ['test.mosquitto.org', () => wsProbe('wss://test.mosquitto.org:8081', 'mqtt')],
-    ['tracker.openwebtorrent.com', () => wsProbe('wss://tracker.openwebtorrent.com')],
-    ['tracker.webtorrent.dev', () => wsProbe('wss://tracker.webtorrent.dev')],
-    ['relay.damus.io', () => wsProbe('wss://relay.damus.io')],
-    ['nos.lol', () => wsProbe('wss://nos.lol')],
-    ['relay.primal.net', () => wsProbe('wss://relay.primal.net')]
-  ];
-  await Promise.all(spare.map(async ([host, run]) => {
-    const li = row('Запасная площадка: ' + host), t0 = Date.now();
-    const ok = await run(); set(li, ok, ok ? 'открывается, ' + (Date.now() - t0) + ' мс' : 'не открывается');
-  }));
+  const jobs2 = stuns.map(async ([title, srv]) => { const li = row(title); const r = await iceProbe(srv, false); set(li, r.ok, r.ok ? 'отвечает, ' + r.ms + ' мс' : 'не отвечает'); return r.ok; });
+  const found = (await Promise.all(jobs)).filter(Boolean).length, addr = (await Promise.all(jobs2)).filter(Boolean).length;
+  const sum = row('Итог');
+  set(sum, found > 0 && addr > 0, found === 0 ? 'поиск собеседников недоступен' : addr === 0 ? 'прямое соединение под вопросом' : 'звонки должны работать');
 
   $('diagCopy').disabled = false;
   $('diagCopy').onclick = async () => {
