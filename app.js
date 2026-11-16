@@ -730,6 +730,66 @@ if (api) {
 }
 refreshDevices();
 
+/* ---------------- проверка связи: какие серверы видны из этой сети ---------------- */
+function iceProbe(server, relayOnly) { // собирает адреса через один сервер и смотрит, ответил ли он
+  return new Promise((resolve) => {
+    let pc, found = false; const t0 = Date.now();
+    const want = relayOnly ? 'relay' : 'srflx';
+    const finish = () => { try { pc.close(); } catch (e) { /* ignore */ } resolve({ ok: found, ms: Date.now() - t0 }); };
+    try {
+      pc = new RTCPeerConnection({ iceServers: [server], iceTransportPolicy: relayOnly ? 'relay' : 'all' });
+      pc.onicecandidate = (e) => {
+        if (!e.candidate) return finish();
+        if (e.candidate.type === want || e.candidate.candidate.includes(' typ ' + want)) { found = true; finish(); }
+      };
+      pc.createDataChannel('probe');
+      pc.createOffer().then((o) => pc.setLocalDescription(o)).catch(finish);
+      setTimeout(finish, 7000);
+    } catch (e) { resolve({ ok: false, ms: 0 }); }
+  });
+}
+async function runDiag() {
+  const list = $('diagList'); list.innerHTML = ''; $('diagCopy').disabled = true;
+  const report = ['ALEKUTAK, проверка связи, ' + new Date().toLocaleString('ru-RU'), navigator.userAgent];
+  const row = (title) => { const li = document.createElement('li'); li.className = 'wait'; li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = title; list.appendChild(li); return li; };
+  const set = (li, ok, text) => { li.className = ok ? 'ok' : 'bad'; li.lastChild.textContent = text; report.push((ok ? '[да]  ' : '[НЕТ] ') + li.firstChild.textContent + ': ' + text); };
+  const timed = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
+  const opt = peerOptions();
+
+  const r1 = row('Сервер поиска собеседников: обычный запрос');
+  const t1 = Date.now();
+  const http = await timed(fetch('https://0.peerjs.com/peerjs/id', { cache: 'no-store' }).then((r) => r.ok).catch(() => false), 8000);
+  set(r1, !!http, http ? 'отвечает, ' + (Date.now() - t1) + ' мс' : http === null ? 'нет ответа за 8 секунд' : 'запрос не прошёл');
+
+  const r2 = row('Сервер поиска собеседников: постоянное соединение');
+  const ws = await new Promise((res) => {
+    const t0 = Date.now(); let p;
+    const done = (ok, text) => { try { p.destroy(); } catch (e) { /* ignore */ } res({ ok, text }); };
+    try {
+      p = new Peer(opt);
+      p.on('open', () => done(true, 'подключается, ' + (Date.now() - t0) + ' мс'));
+      p.on('error', (e) => done(false, 'ошибка: ' + (e.type || 'неизвестная')));
+      setTimeout(() => done(false, 'нет ответа за 10 секунд'), 10000);
+    } catch (e) { res({ ok: false, text: 'не запустилось' }); }
+  });
+  set(r2, ws.ok, ws.text);
+
+  const stuns = [['Определение адреса: Google', { urls: 'stun:stun.l.google.com:19302' }], ['Определение адреса: Cloudflare', { urls: 'stun:stun.cloudflare.com:3478' }]];
+  for (const [title, srv] of stuns) { const li = row(title); const r = await iceProbe(srv, false); set(li, r.ok, r.ok ? 'отвечает, ' + r.ms + ' мс' : 'не отвечает'); }
+  const turn = opt.config.iceServers.find((x) => x.username);
+  const r5 = row('Запасной путь для звука и видео (ретранслятор)');
+  const tr = await iceProbe(turn, true); set(r5, tr.ok, tr.ok ? 'работает, ' + tr.ms + ' мс' : 'не работает');
+
+  $('diagCopy').disabled = false;
+  $('diagCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText(report.join('\n')); toast('Отчёт скопирован, отправь его Ваду'); }
+    catch (e) { prompt('Скопируй отчёт', report.join(' | ')); }
+  };
+}
+$('btnDiag').onclick = () => { $('diag').hidden = false; runDiag(); };
+$('diagClose').onclick = () => { $('diag').hidden = true; };
+if (new URLSearchParams(location.search).has('diag')) { const sp0 = $('splash'); if (sp0) sp0.remove(); $('diag').hidden = false; runDiag(); }
+
 /* ---------------- заставка при запуске ---------------- */
 (function splash() {
   const sp = $('splash'); if (!sp) return;

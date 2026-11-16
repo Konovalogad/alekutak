@@ -50,6 +50,7 @@
       <label class="sw"><input type="checkbox" id="startMic" checked><i></i>Микрофон</label>
       <label class="sw"><input type="checkbox" id="startCam"><i></i>Камера</label>
       <button type="button" id="btnSettingsLobby" class="link">Настройки звука</button>
+      <button type="button" id="btnDiag" class="link">Проверка связи</button>
     </div>
 
     <button type="button" id="btnCreate" class="btn solid">Создать комнату</button>
@@ -164,6 +165,16 @@
     </div>
 
     <div class="actions"><button id="settingsClose" class="btn solid">Готово</button></div>
+  </div>
+</div>
+
+<!-- проверка связи -->
+<div id="diag" class="modal" hidden>
+  <div class="box">
+    <h2>Проверка связи</h2>
+    <p class="diag-note">Показывает, какие серверы доступны из твоей сети. Занимает около 20 секунд.</p>
+    <ul id="diagList" class="diag-list"></ul>
+    <div class="actions"><button id="diagCopy" class="btn" disabled>Скопировать отчёт</button><button id="diagClose" class="btn solid">Закрыть</button></div>
   </div>
 </div>
 
