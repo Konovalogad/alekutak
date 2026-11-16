@@ -780,6 +780,36 @@ async function runDiag() {
   const r5 = row('Запасной путь для звука и видео (ретранслятор)');
   const tr = await iceProbe(turn, true); set(r5, tr.ok, tr.ok ? 'работает, ' + tr.ms + ' мс' : 'не работает');
 
+  // запасные площадки: где можно разместить сервер поиска так, чтобы он открывался из любой страны
+  const timedOk = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(false), ms))]);
+  const httpProbe = (url) => timedOk(fetch(url, { mode: 'no-cors', cache: 'no-store' }).then(() => true).catch(() => false), 8000);
+  const wsProbe = (url, proto) => timedOk(new Promise((res) => {
+    try { const w = proto ? new WebSocket(url, proto) : new WebSocket(url); w.onopen = () => { res(true); w.close(); }; w.onerror = () => res(false); w.onclose = () => res(false); } catch (e) { res(false); }
+  }), 8000);
+  const spare = [
+    ['huggingface.co', () => httpProbe('https://huggingface.co/robots.txt')],
+    ['hf.space', () => httpProbe('https://alekutak-probe.hf.space/')],
+    ['deno.dev', () => httpProbe('https://alekutak-probe.deno.dev/')],
+    ['onrender.com', () => httpProbe('https://alekutak-probe.onrender.com/')],
+    ['koyeb.app', () => httpProbe('https://alekutak-probe.koyeb.app/')],
+    ['fly.dev', () => httpProbe('https://alekutak-probe.fly.dev/')],
+    ['workers.dev', () => httpProbe('https://alekutak-probe.workers.dev/')],
+    ['supabase.co', () => httpProbe('https://alekutak-probe.supabase.co/')],
+    ['firebaseio.com', () => httpProbe('https://alekutak-probe-default-rtdb.firebaseio.com/.json')],
+    ['broker.emqx.io', () => wsProbe('wss://broker.emqx.io:8084/mqtt', 'mqtt')],
+    ['broker.hivemq.com', () => wsProbe('wss://broker.hivemq.com:8884/mqtt', 'mqtt')],
+    ['test.mosquitto.org', () => wsProbe('wss://test.mosquitto.org:8081', 'mqtt')],
+    ['tracker.openwebtorrent.com', () => wsProbe('wss://tracker.openwebtorrent.com')],
+    ['tracker.webtorrent.dev', () => wsProbe('wss://tracker.webtorrent.dev')],
+    ['relay.damus.io', () => wsProbe('wss://relay.damus.io')],
+    ['nos.lol', () => wsProbe('wss://nos.lol')],
+    ['relay.primal.net', () => wsProbe('wss://relay.primal.net')]
+  ];
+  await Promise.all(spare.map(async ([host, run]) => {
+    const li = row('Запасная площадка: ' + host), t0 = Date.now();
+    const ok = await run(); set(li, ok, ok ? 'открывается, ' + (Date.now() - t0) + ' мс' : 'не открывается');
+  }));
+
   $('diagCopy').disabled = false;
   $('diagCopy').onclick = async () => {
     try { await navigator.clipboard.writeText(report.join('\n')); toast('Отчёт скопирован, отправь его Ваду'); }

@@ -334,3 +334,5 @@ html, body { height: 100dvh; }
 .diag-list li.bad { border-left-color: var(--bad); } .diag-list li.bad b { color: var(--bad); }
 #diag .actions { gap: 10px; }
 body.overlay #diag { display: none !important; }
+#diag .box { width: 560px; }
+.diag-list li { padding: 7px 12px; }
